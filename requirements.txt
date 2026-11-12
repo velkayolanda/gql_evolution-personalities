@@ -3,6 +3,8 @@ fastapi[all]
 uvicorn[standard]
 gunicorn
 
+pytest
+pytest_asyncio
 asyncpg
 sqlalchemy-cockroachdb
 

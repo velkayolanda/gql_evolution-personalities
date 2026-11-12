@@ -151,13 +151,13 @@ class BaseService(typing.Generic[T]):
             )
 
     @classmethod
-    async def call_error_callback(cls, Error, *, msg, code, exception=None):
+    async def call_error_callback(cls, Error, *, msg, code, exception=None, filename=None, lineno=None):
         # Chyba se vraci jako typovy error objekt (zadna vyjimka), proto ji je nutne
         # zapsat do chyb operace, jinak by SessionCommitExtension castecne zmeny commitla.
         errors = operation_errors.get()
         if errors is not None:
             errors.append({'msg': msg, 'code': code, '_input': {}})
-        return await cls.call_callback(Error, msg=msg, exception=exception, code=code)
+        return await cls.call_callback(Error, msg=msg, exception=exception, code=code, filename=filename, lineno=lineno)
 
     @classmethod
     async def call_callback(cls, callback, *args, **kwargs):

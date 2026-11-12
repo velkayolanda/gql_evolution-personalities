@@ -150,9 +150,9 @@ services:
     <<: *common-gql
     image: velkayolanda/gql-personalities:latest
     # SWITCH do DOCKER HUB: vymaz 3 liny dole (build, context, dockerfile)
-    build:
-      context: .
-      dockerfile: Dockerfile
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
     ports:
       - 33008:8000
     command: uvicorn main:app --host 0.0.0.0 --port 8000
