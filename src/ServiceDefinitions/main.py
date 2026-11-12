@@ -38,6 +38,7 @@ from sqlalchemy import inspect
 from sqlalchemy.orm.properties import ColumnProperty, RelationshipProperty
 
 from src.DBDefinitions import ComposeConnectionString, startEngine
+from src.DBDefinitions.main import coerce_column_value
 from src.Dataloaders import LoaderMap
 from src.ServiceDefinitions.BaseService import (
     BaseService,
@@ -436,7 +437,8 @@ def get_primary_key_value(model_cls: type, payload: JsonDict) -> typing.Any:
             f"Missing primary key '{primary_key_name}' in payload"
         )
 
-    return payload[primary_key_name]
+    # loader paruje vysledky podle UUID, str id by nikdy nenasel
+    return coerce_column_value(model_cls, primary_key_name, payload[primary_key_name])
 
 
 def parse_include(payload: JsonDict) -> set[str]:

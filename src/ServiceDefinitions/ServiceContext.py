@@ -11,6 +11,10 @@ if typing.TYPE_CHECKING:
     from src.ServiceDefinitions.Domain_Personalities.Education.EducationTypeService import EducationTypeService as _EducationTypeService
     from src.ServiceDefinitions.Domain_Personalities.Certificates import CertificateTypeService as _CertificateTypeService
     from src.ServiceDefinitions.Domain_Personalities.Certificates.UserCertificateService import UserCertificateService as _UserCertificateService
+    from src.ServiceDefinitions.Domain_Personalities2.ContactService import ContactService as _ContactService
+    from src.ServiceDefinitions.Domain_Personalities2.ContactTypeService import ContactTypeService as _ContactTypeService
+    from src.ServiceDefinitions.Domain_Personalities2.EmploymentService import EmploymentService as _EmploymentService
+    from src.ServiceDefinitions.Domain_Personalities2.EmploymentTypeService import EmploymentTypeService as _EmploymentTypeService
 
 @dataclasses.dataclass(frozen=True)
 class ServiceRegistry:
@@ -49,6 +53,26 @@ class ServiceRegistry:
         from src.ServiceDefinitions.Domain_Personalities.Certificates.UserCertificateService import UserCertificateService
         return UserCertificateService
 
+    @property
+    def ContactService(self) -> type['_ContactService']:
+        from src.ServiceDefinitions.Domain_Personalities2.ContactService import ContactService
+        return ContactService
+
+    @property
+    def ContactTypeService(self) -> type['_ContactTypeService']:
+        from src.ServiceDefinitions.Domain_Personalities2.ContactTypeService import ContactTypeService
+        return ContactTypeService
+
+    @property
+    def EmploymentService(self) -> type['_EmploymentService']:
+        from src.ServiceDefinitions.Domain_Personalities2.EmploymentService import EmploymentService
+        return EmploymentService
+
+    @property
+    def EmploymentTypeService(self) -> type['_EmploymentTypeService']:
+        from src.ServiceDefinitions.Domain_Personalities2.EmploymentTypeService import EmploymentTypeService
+        return EmploymentTypeService
+
 SERVICES = ServiceRegistry()
 
 
@@ -61,9 +85,6 @@ class ServiceContext:
     session: typing.Any = None
     Services: ServiceRegistry = SERVICES
 
-    # uoishelpers helpers commonly expect info.context to behave like a dict
-    # with at least the key "loaders". Keeping these methods lets us pass a
-    # typed ServiceContext directly as Strawberry context.
     def __getitem__(self, key: str) -> typing.Any:
         return getattr(self, key)
 

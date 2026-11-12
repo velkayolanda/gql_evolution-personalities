@@ -5,6 +5,8 @@ import src.DBDefinitions
 from src.DBDefinitions import BaseDBModel, EventModel, EventInvitationModel
 from src.DBDefinitions import PersonalDataModel, EducationModel, EducationTypeModel
 from src.DBDefinitions import CertificateTypeModel, UserCertificateModel
+from src.DBDefinitions import ContactModel, ContactTypeModel, EmploymentModel, EmploymentTypeModel
+
 
 class LoaderMap(LoaderMapBase[BaseDBModel]):
     BaseModel = BaseDBModel
@@ -16,6 +18,10 @@ class LoaderMap(LoaderMapBase[BaseDBModel]):
     EducationTypeModel: IDLoader[src.DBDefinitions.EducationTypeModel] = None
     CertificateTypeModel: IDLoader[src.DBDefinitions.CertificateTypeModel] = None
     UserCertificateModel: IDLoader[src.DBDefinitions.UserCertificateModel] = None
+    ContactModel: IDLoader[src.DBDefinitions.ContactModel] = None
+    ContactTypeModel: IDLoader[src.DBDefinitions.ContactTypeModel] = None
+    EmploymentModel: IDLoader[src.DBDefinitions.EmploymentModel] = None
+    EmploymentTypeModel: IDLoader[src.DBDefinitions.EmploymentTypeModel] = None
 
     def __init__(self, session):
         super().__init__(session)
@@ -26,6 +32,10 @@ class LoaderMap(LoaderMapBase[BaseDBModel]):
         self.EducationTypeModel = self.get(EducationTypeModel)
         self.CertificateTypeModel = self.get(CertificateTypeModel)
         self.UserCertificateModel = self.get(UserCertificateModel)
+        self.ContactModel = self.get(ContactModel)
+        self.ContactTypeModel = self.get(ContactTypeModel)
+        self.EmploymentModel = self.get(EmploymentModel)
+        self.EmploymentTypeModel = self.get(EmploymentTypeModel)
 
     def get_by_name(self, name: str):
         return getattr(self, name)

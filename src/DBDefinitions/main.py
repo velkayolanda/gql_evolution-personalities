@@ -151,12 +151,7 @@ def resolve_entity(entity_name: str) -> type:
     if result is not None:
         return result
 
-    available = sorted(
-        {
-            cls.__name__
-            for cls in iter_mapped_classes()
-        }
-    )
+    available = sorted({cls.__name__ for cls in iter_mapped_classes()})
 
     raise CliError(
         f"Unknown entity '{entity_name}'. Available entities: {', '.join(available)}"
@@ -165,11 +160,7 @@ def resolve_entity(entity_name: str) -> type:
 
 def get_column_names(model_cls: type) -> set[str]:
     mapper = inspect(model_cls)
-    return {
-        prop.key
-        for prop in mapper.attrs
-        if isinstance(prop, ColumnProperty)
-    }
+    return {prop.key for prop in mapper.attrs if isinstance(prop, ColumnProperty)}
 
 
 def get_relationships(model_cls: type) -> dict[str, RelationshipProperty]:
@@ -179,6 +170,29 @@ def get_relationships(model_cls: type) -> dict[str, RelationshipProperty]:
         for prop in mapper.attrs
         if isinstance(prop, RelationshipProperty)
     }
+
+
+def coerce_column_value(model_cls: type, key: str, value: typing.Any) -> typing.Any:
+    """JSON umi jen str, datumy a UUID je treba prevest podle typu sloupce."""
+    if not isinstance(value, str):
+        return value
+
+    try:
+        python_type = inspect(model_cls).columns[key].type.python_type
+    except NotImplementedError:
+        return value
+
+    try:
+        if python_type is datetime.datetime:
+            return datetime.datetime.fromisoformat(value).replace(tzinfo=None)
+        if python_type is datetime.date:
+            return datetime.date.fromisoformat(value)
+        if python_type is uuid.UUID:
+            return uuid.UUID(value)
+    except ValueError as e:
+        raise CliError(f"Invalid value for '{key}': {e}") from e
+
+    return value
 
 
 def split_columns_and_relationships(
@@ -193,13 +207,11 @@ def split_columns_and_relationships(
 
     for key, value in payload.items():
         if key in column_names:
-            column_values[key] = value
+            column_values[key] = coerce_column_value(model_cls, key, value)
         elif key in relationships:
             relationship_values[key] = value
         else:
-            raise CliError(
-                f"Unknown attribute '{key}' for entity {model_cls.__name__}"
-            )
+            raise CliError(f"Unknown attribute '{key}' for entity {model_cls.__name__}")
 
     return column_values, relationship_values
 
@@ -238,14 +250,9 @@ def build_instance(model_cls: type, payload: JsonDict) -> typing.Any:
                 continue
 
             if not isinstance(value, list):
-                raise CliError(
-                    f"Relationship '{relationship_name}' expects a list"
-                )
+                raise CliError(f"Relationship '{relationship_name}' expects a list")
 
-            related_items = [
-                build_instance(related_cls, item)
-                for item in value
-            ]
+            related_items = [build_instance(related_cls, item) for item in value]
             setattr(instance, relationship_name, related_items)
 
         else:
@@ -254,9 +261,7 @@ def build_instance(model_cls: type, payload: JsonDict) -> typing.Any:
                 continue
 
             if not isinstance(value, dict):
-                raise CliError(
-                    f"Relationship '{relationship_name}' expects an object"
-                )
+                raise CliError(f"Relationship '{relationship_name}' expects an object")
 
             related_item = build_instance(related_cls, value)
             setattr(instance, relationship_name, related_item)
@@ -278,9 +283,7 @@ def serialize_instance(
 
     object_id = id(instance)
     if object_id in visited:
-        return {
-            "_ref": str(getattr(instance, "id", object_id))
-        }
+        return {"_ref": str(getattr(instance, "id", object_id))}
 
     visited.add(object_id)
 
@@ -328,9 +331,7 @@ def get_primary_key_name(model_cls: type) -> str:
     primary_key = mapper.primary_key
 
     if len(primary_key) != 1:
-        raise CliError(
-            f"Entity {model_cls.__name__} must have exactly one primary key"
-        )
+        raise CliError(f"Entity {model_cls.__name__} must have exactly one primary key")
 
     return primary_key[0].key
 
@@ -339,9 +340,7 @@ def get_primary_key_value(model_cls: type, payload: JsonDict) -> typing.Any:
     primary_key_name = get_primary_key_name(model_cls)
 
     if primary_key_name not in payload:
-        raise CliError(
-            f"Missing primary key '{primary_key_name}' in payload"
-        )
+        raise CliError(f"Missing primary key '{primary_key_name}' in payload")
 
     return payload[primary_key_name]
 
@@ -358,7 +357,9 @@ def parse_include(payload: JsonDict) -> set[str]:
     return set(include)
 
 
-def normalize_list_payload(payload: JsonDict) -> tuple[JsonDict, set[str], int, int, str | None]:
+def normalize_list_payload(
+    payload: JsonDict,
+) -> tuple[JsonDict, set[str], int, int, str | None]:
     """
     Normalizuje payload pro list/page operaci.
 
@@ -389,9 +390,7 @@ def normalize_list_payload(payload: JsonDict) -> tuple[JsonDict, set[str], int, 
         where = payload.get("where") or {}
     else:
         where = {
-            key: value
-            for key, value in payload.items()
-            if key not in control_keys
+            key: value for key, value in payload.items() if key not in control_keys
         }
 
     if not isinstance(where, dict):
@@ -406,6 +405,7 @@ def normalize_list_payload(payload: JsonDict) -> tuple[JsonDict, set[str], int, 
         raise CliError("'order_by' must be a string column name")
 
     return where, include, limit, offset, order_by
+
 
 async def op_create(session, model_cls: type, payload: JsonDict) -> JsonDict:
     instance = build_instance(model_cls, payload)
@@ -433,9 +433,7 @@ async def op_get(session, model_cls: type, payload: JsonDict) -> JsonDict:
                 f"for entity {model_cls.__name__}"
             )
 
-        stmt = stmt.options(
-            selectinload(getattr(model_cls, relationship_name))
-        )
+        stmt = stmt.options(selectinload(getattr(model_cls, relationship_name)))
 
     result = await session.execute(stmt)
     instance = result.scalar_one_or_none()
@@ -477,9 +475,7 @@ async def op_list(session, model_cls: type, payload: JsonDict) -> list[JsonDict]
                 f"for entity {model_cls.__name__}"
             )
 
-        stmt = stmt.options(
-            selectinload(getattr(model_cls, relationship_name))
-        )
+        stmt = stmt.options(selectinload(getattr(model_cls, relationship_name)))
 
     stmt = stmt.limit(limit).offset(offset)
 
@@ -493,6 +489,7 @@ async def op_list(session, model_cls: type, payload: JsonDict) -> list[JsonDict]
         )
         for instance in instances
     ]
+
 
 async def op_update(session, model_cls: type, payload: JsonDict) -> JsonDict:
     primary_key_name = get_primary_key_name(model_cls)
@@ -509,9 +506,7 @@ async def op_update(session, model_cls: type, payload: JsonDict) -> JsonDict:
         }
 
     update_payload = {
-        key: value
-        for key, value in payload.items()
-        if key != primary_key_name
+        key: value for key, value in payload.items() if key != primary_key_name
     }
 
     column_values, relationship_values = split_columns_and_relationships(
@@ -530,23 +525,16 @@ async def op_update(session, model_cls: type, payload: JsonDict) -> JsonDict:
 
         if relationship.uselist:
             if not isinstance(value, list):
-                raise CliError(
-                    f"Relationship '{relationship_name}' expects a list"
-                )
+                raise CliError(f"Relationship '{relationship_name}' expects a list")
 
             setattr(
                 instance,
                 relationship_name,
-                [
-                    build_instance(related_cls, item)
-                    for item in value
-                ],
+                [build_instance(related_cls, item) for item in value],
             )
         else:
             if value is not None and not isinstance(value, dict):
-                raise CliError(
-                    f"Relationship '{relationship_name}' expects an object"
-                )
+                raise CliError(f"Relationship '{relationship_name}' expects an object")
 
             setattr(
                 instance,
@@ -710,3 +698,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
